@@ -70,10 +70,12 @@ st.selectbox(
     key="quiz_generation",
     on_change=pick_mystery,
 )
-st.caption(
-    f"Score: {st.session_state.quiz_score} · "
-    f"Streak: {st.session_state.quiz_streak} · "
-    f"Best streak: {st.session_state.quiz_best_streak}"
+# Small badges in the theme's red, one per number
+st.markdown(
+    f":primary-badge[:material/star: Score {st.session_state.quiz_score}] "
+    f":primary-badge[:material/local_fire_department: Streak "
+    f"{st.session_state.quiz_streak}] "
+    f":primary-badge[:material/trophy: Best {st.session_state.quiz_best_streak}]"
 )
 
 # Show the silhouette until the round is over
