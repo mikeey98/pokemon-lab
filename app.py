@@ -4,7 +4,8 @@ st.set_page_config(page_title="Pokémon Lab")
 
 page = st.navigation(
     [
-        st.Page("pages/twins.py", title="Twins", default=True),
+        st.Page("pages/home.py", title="Home", default=True),
+        st.Page("pages/twins.py", title="Twins"),
         st.Page("pages/mega.py", title="Mega Evolution"),
         st.Page("pages/compare.py", title="Compare"),
         st.Page("pages/quiz.py", title="Who's That Pokémon?"),
