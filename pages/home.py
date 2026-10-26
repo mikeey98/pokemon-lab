@@ -140,7 +140,7 @@ def feature_card(key: str, page: str, title: str, description: str) -> None:
         st.caption(description)
 
 
-page_header("Welcome, trainer!", POKEBALL_EMBLEM)
+page_header("Welcome!", POKEBALL_EMBLEM)
 st.html(CARD_CSS)
 
 with st.container(key="home_cards"):
