@@ -1,33 +1,41 @@
-from pathlib import Path
-
-import pandas as pd
 import requests
 import streamlit as st
-from shared.sprite_ids import special_sprite_ids
-from shared.type_icons import type_icons_html
+from shared.data import find_pokemon, load_pokemon, sprite_url, sprite_url_for_id
+from shared.ui import RED, page_header, pokemon_summary, text_emblem
 
-st.html("""
-<div style="position:relative; overflow:hidden; height:150px;
-            display:flex; align-items:center;">
-    <div style="position:absolute; right:18px; top:0;
-                width:150px; height:150px; box-sizing:border-box;
-                border:9px solid #C73E3E; border-radius:50%;
-                display:flex; align-items:center; justify-content:center;
-                color:#C73E3E; font:900 52px Nunito,sans-serif;
-                opacity:0.25;">№</div>
-    <h1 style="position:relative; margin:0; color:#24334A;
-               font-family:Nunito,sans-serif;">
-        Pokédex
-    </h1>
-</div>
-""")
+page_header("Pokédex", text_emblem("№", font_size=52))
 
-data_path = Path(__file__).parent.parent / "data" / "PokemonData_clean.csv"
-pokemon = pd.read_csv(data_path)
+pokemon = load_pokemon()
 
 
 def choose_pokemon(name):
     st.session_state["pokedex_selected"] = name
+
+
+def sprite_button(key, image_url, target_name):
+    """A button that looks like a sprite and opens that Pokémon when clicked."""
+    st.html(f"""
+    <style>
+    .st-key-{key} button {{
+        width: 100px;
+        height: 100px;
+        background: url("{image_url}") center / contain no-repeat;
+        border: 1px solid transparent;
+        color: transparent;
+    }}
+    .st-key-{key} button:hover {{
+        border-color: {RED};
+    }}
+    </style>
+    """)
+
+    st.button(
+        f"Open {target_name}",
+        key=key,
+        on_click=choose_pokemon,
+        args=(target_name,),
+        width=100,
+    )
 
 
 name = st.selectbox(
@@ -41,33 +49,11 @@ name = st.selectbox(
 if name is None:
     st.stop()
 
-selected = pokemon.loc[pokemon["Name"].eq(name)].iloc[0]
+selected = find_pokemon(pokemon, name)
 
 # Show the selected Pokémon
 st.subheader(str(selected["Name"]))
-
-sprite_id = special_sprite_ids.get(str(selected["Name"]), int(selected["Num"]))
-sprite_url = (
-    "https://raw.githubusercontent.com/PokeAPI/sprites/master/"
-    f"sprites/pokemon/{sprite_id}.png"
-)
-
-image_col, info_col = st.columns([1, 4])
-
-with image_col:
-    st.image(sprite_url, width=150)
-
-with info_col:
-    types = [
-        str(selected[column])
-        for column in ("Type1", "Type2")
-        if pd.notna(selected[column])
-    ]
-    st.html(type_icons_html(types))
-
-    stats = ["HP", "Attack", "Defense", "SpAtk", "SpDef", "Speed"]
-    for column, stat in zip(st.columns(6), stats):
-        column.metric(stat, int(selected[stat]))
+pokemon_summary(selected)
 
 
 @st.cache_data
@@ -124,6 +110,10 @@ def evolution_members(chain):
     return members
 
 
+def species_id(species):
+    return int(species["url"].rstrip("/").split("/")[-1])
+
+
 try:
     chain = get_evolution_chain(int(selected["Num"]))
     members = evolution_members(chain)
@@ -141,51 +131,27 @@ for start in range(0, len(members), 4):
 
     for column, (species, level) in zip(st.columns(4), row):
         with column, st.container(border=True):
-            species_id = int(species["url"].rstrip("/").split("/")[-1])
-            sprite_url = (
-                "https://raw.githubusercontent.com/PokeAPI/sprites/master/"
-                f"sprites/pokemon/{species_id}.png"
-            )
+            member_id = species_id(species)
+            member_sprite_url = sprite_url_for_id(member_id)
 
             available_names = pokemon.loc[
-                pokemon["Num"].eq(species_id)
+                pokemon["Num"].eq(member_id)
                 & ~pokemon["Name"].str.startswith("Mega "),
                 "Name",
             ]
 
+            # Later generations are not in the dataset, so they cannot be opened.
             if available_names.empty:
-                st.image(sprite_url, width=100)
+                st.image(member_sprite_url, width=100)
                 st.markdown(f"**{species['name'].replace('-', ' ').title()}**")
             else:
                 target_name = str(available_names.iloc[0])
-
-                st.html(f"""
-                <style>
-                .st-key-evolution_{species_id} button {{
-                    width: 100px;
-                    height: 100px;
-                    background: url("{sprite_url}") center / contain no-repeat;
-                    border: 1px solid transparent;
-                    color: transparent;
-                }}
-                .st-key-evolution_{species_id} button:hover {{
-                    border-color: #C73E3E;
-                }}
-                </style>
-                """)
-
-                st.button(
-                    f"Open {target_name}",
-                    key=f"evolution_{species_id}",
-                    on_click=choose_pokemon,
-                    args=(target_name,),
-                    width=100,
-                )
+                sprite_button(f"evolution_{member_id}", member_sprite_url, target_name)
                 st.markdown(f"**{target_name}**")
             st.caption(f"Stage {level}")
 
 # Find Mega forms belonging to this evolution family
-family_ids = {int(species["url"].rstrip("/").split("/")[-1]) for species, _ in members}
+family_ids = {species_id(species) for species, _ in members}
 mega_forms = pokemon.loc[
     pokemon["Num"].isin(family_ids) & pokemon["Name"].str.startswith("Mega ")
 ]
@@ -196,14 +162,9 @@ if not mega_forms.empty:
     for start in range(0, len(mega_forms), 4):
         row = mega_forms.iloc[start : start + 4]
 
-        for column, (_, mega) in zip(st.columns(4), row.iterrows()):
+        for column, (index, mega) in zip(st.columns(4), row.iterrows()):
             with column, st.container(border=True):
                 mega_name = str(mega["Name"])
-                sprite_id = special_sprite_ids[mega_name]
-                sprite_url = (
-                    "https://raw.githubusercontent.com/PokeAPI/sprites/master/"
-                    f"sprites/pokemon/{sprite_id}.png"
-                )
 
                 base_name = pokemon.loc[
                     pokemon["Num"].eq(mega["Num"])
@@ -211,27 +172,6 @@ if not mega_forms.empty:
                     "Name",
                 ].iloc[0]
 
-                st.html(f"""
-                <style>
-                .st-key-mega_{sprite_id} button {{
-                    width: 100px;
-                    height: 100px;
-                    background: url("{sprite_url}") center / contain no-repeat;
-                    border: 1px solid transparent;
-                    color: transparent;
-                }}
-                .st-key-mega_{sprite_id} button:hover {{
-                    border-color: #C73E3E;
-                }}
-                </style>
-                """)
-
-                st.button(
-                    f"Open {mega_name}",
-                    key=f"mega_{sprite_id}",
-                    on_click=choose_pokemon,
-                    args=(mega_name,),
-                    width=100,
-                )
+                sprite_button(f"mega_{index}", sprite_url(mega), mega_name)
                 st.markdown(f"**{mega_name}**")
                 st.caption(f"Form of {base_name}")

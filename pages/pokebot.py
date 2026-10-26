@@ -1,20 +1,20 @@
 from pathlib import Path
 
-import pandas as pd
 import requests
 import streamlit as st
+from shared.data import find_pokemon, load_pokemon, sprite_url, types_of
 from shared.pokemon_facts import build_pokemon_facts
 from shared.qwen import ask_qwen
-from shared.sprite_ids import special_sprite_ids
 from shared.type_icons import type_icons_html
+from shared.ui import NAVY
 
 bot_icon = Path(__file__).parent.parent / "assets" / "pokebot.svg"
 
 title_col, icon_col = st.columns([4, 1], vertical_alignment="center")
 
 with title_col:
-    st.html("""
-    <h1 style="margin:0; color:#24334A; font-family:Nunito,sans-serif;">
+    st.html(f"""
+    <h1 style="margin:0; color:{NAVY}; font-family:Nunito,sans-serif;">
         Pokébot
     </h1>
     """)
@@ -23,8 +23,7 @@ with title_col:
 with icon_col:
     st.image(bot_icon, width=130)
 
-data_path = Path(__file__).parent.parent / "data" / "PokemonData_clean.csv"
-pokemon = pd.read_csv(data_path)
+pokemon = load_pokemon()
 
 chosen = st.selectbox(
     "Choose a Pokémon",
@@ -36,30 +35,18 @@ chosen = st.selectbox(
 if chosen is None:
     st.stop()
 
-selected = pokemon.loc[pokemon["Name"].eq(chosen)].iloc[0]
+selected = find_pokemon(pokemon, str(chosen))
 facts = build_pokemon_facts(selected)
-
-sprite_id = special_sprite_ids.get(str(chosen), int(selected["Num"]))
-sprite_url = (
-    "https://raw.githubusercontent.com/PokeAPI/sprites/master/"
-    f"sprites/pokemon/{sprite_id}.png"
-)
-
-types = [
-    str(selected[column])
-    for column in ("Type1", "Type2")
-    if pd.notna(selected[column])
-]
 
 with st.container(border=True):
     image_col, info_col = st.columns([1, 4], vertical_alignment="center")
 
     with image_col:
-        st.image(sprite_url, width=120)
+        st.image(sprite_url(selected), width=120)
 
     with info_col:
         st.subheader(str(chosen))
-        st.html(type_icons_html(types))
+        st.html(type_icons_html(types_of(selected)))
         st.caption("Ask me about its stats, or ask me to make a playful guess.")
 
 # Start a new conversation when a different Pokémon is selected.

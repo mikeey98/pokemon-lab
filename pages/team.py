@@ -1,13 +1,11 @@
-from pathlib import Path
-
 import pandas as pd
 import requests
 import streamlit as st
-from shared.sprite_ids import special_sprite_ids
+from shared.data import STATS, find_pokemon, load_pokemon, sprite_url, types_of
 from shared.type_icons import type_icons_html
+from shared.ui import TEAM_EMBLEM, page_header, pokemon_summary
 
-data_path = Path(__file__).parent.parent / "data" / "PokemonData_clean.csv"
-pokemon = pd.read_csv(data_path)
+pokemon = load_pokemon()
 
 
 @st.cache_data
@@ -29,11 +27,8 @@ def get_type_relations(type_name):
 def damage_multiplier(attack_type, member):
     multiplier = 1.0
 
-    for column in ("Type1", "Type2"):
-        if pd.isna(member[column]):
-            continue
-
-        relations = get_type_relations(str(member[column]))
+    for type_name in types_of(member):
+        relations = get_type_relations(type_name)
 
         if attack_type in relations["none"]:
             return 0.0
@@ -50,12 +45,7 @@ def show_weakness_row(attack_type, weak_members, team_data):
     names = []
 
     for name, _ in weak_members:
-        member = team_data.loc[team_data["Name"].eq(name)].iloc[0]
-        sprite_id = special_sprite_ids.get(name, int(member["Num"]))
-        sprite_urls.append(
-            "https://raw.githubusercontent.com/PokeAPI/sprites/master/"
-            f"sprites/pokemon/{sprite_id}.png"
-        )
+        sprite_urls.append(sprite_url(find_pokemon(team_data, name)))
         names.append(name)
 
     with st.container(border=True):
@@ -70,28 +60,7 @@ def show_weakness_row(attack_type, weak_members, team_data):
         sprites_col.image(sprite_urls, width=45, alt=names)
 
 
-# Six circles represent the six members of a complete team.
-
-team_circles = (
-    '<span style="width:30px;height:30px;border:7px solid #C73E3E;'
-    'border-radius:50%;box-sizing:border-box;"></span>'
-) * 6
-
-st.html(f"""
-<div style="position:relative;overflow:hidden;height:150px;
-            display:flex;align-items:center;">
-    <div style="position:absolute;right:18px;top:0;
-                width:150px;height:150px;
-                display:grid;grid-template-columns:repeat(3, 30px);
-                gap:14px;place-content:center;opacity:0.25;">
-        {team_circles}
-    </div>
-    <h1 style="position:relative;margin:0;color:#24334A;
-               font-family:Nunito,sans-serif;">
-        Team Builder
-    </h1>
-</div>
-""")
+page_header("Team Builder", TEAM_EMBLEM)
 
 
 if "team" not in st.session_state:
@@ -125,30 +94,8 @@ if len(team) < 6:
     st.caption(f"{len(team)}/6 Pokémon selected")
 
     if selected is not None:
-        chosen = pokemon.loc[pokemon["Name"].eq(selected)].iloc[0]
-        sprite_id = special_sprite_ids.get(str(selected), int(chosen["Num"]))
-        sprite_url = (
-            "https://raw.githubusercontent.com/PokeAPI/sprites/master/"
-            f"sprites/pokemon/{sprite_id}.png"
-        )
-
         st.subheader(str(selected))
-        image_col, info_col = st.columns([1, 4])
-
-        with image_col:
-            st.image(sprite_url, width=150)
-
-        with info_col:
-            types = [
-                str(chosen[column])
-                for column in ("Type1", "Type2")
-                if pd.notna(chosen[column])
-            ]
-            st.html(type_icons_html(types))
-
-            stats = ["HP", "Attack", "Defense", "SpAtk", "SpDef", "Speed"]
-            for column, stat in zip(st.columns(6), stats):
-                column.metric(stat, int(chosen[stat]))
+        pokemon_summary(find_pokemon(pokemon, str(selected)))
 
     st.button(
         "Add to team",
@@ -166,15 +113,10 @@ if team:
         row = team[start : start + 3]
 
         for column, name in zip(st.columns(3), row):
-            member = pokemon.loc[pokemon["Name"].eq(name)].iloc[0]
-            sprite_id = special_sprite_ids.get(str(name), int(member["Num"]))
-            sprite_url = (
-                "https://raw.githubusercontent.com/PokeAPI/sprites/master/"
-                f"sprites/pokemon/{sprite_id}.png"
-            )
+            member = find_pokemon(pokemon, name)
 
             with column, st.container(border=True):
-                st.image(sprite_url, width=120)
+                st.image(sprite_url(member), width=120)
 
                 name_col, remove_col = st.columns([6, 1], vertical_alignment="center")
 
@@ -195,14 +137,13 @@ if team:
 
 if len(team) == 6:
     team_data = pokemon.loc[pokemon["Name"].isin(team)]
-    stats = ["HP", "Attack", "Defense", "SpAtk", "SpDef", "Speed"]
-    averages = {stat: float(team_data[stat].mean()) for stat in stats}
+    averages = {stat: float(team_data[stat].mean()) for stat in STATS}
 
     st.subheader("Analysis")
 
     with st.container(border=True):
         st.caption("AVERAGE BASE STATS")
-        for column, stat in zip(st.columns(6), stats):
+        for column, stat in zip(st.columns(6), STATS):
             column.metric(stat, f"{averages[stat]:.1f}")
 
     type_counts = (
@@ -218,8 +159,8 @@ if len(team) == 6:
             type_icons_html([str(type_name)] * int(count), show_names=False)
         )
 
-    highest_stat = max(stats, key=lambda stat: averages[stat])
-    lowest_stat = min(stats, key=lambda stat: averages[stat])
+    highest_stat = max(STATS, key=lambda stat: averages[stat])
+    lowest_stat = min(STATS, key=lambda stat: averages[stat])
 
     strong_col, low_col = st.columns(2)
 
@@ -230,7 +171,7 @@ if len(team) == 6:
     with low_col.container(border=True):
         st.metric("Lowest stat", lowest_stat)
         st.caption(f"Team average: {averages[lowest_stat]:.1f}")
-    
+
     attack_types = sorted(
         set(pokemon["Type1"].dropna()) | set(pokemon["Type2"].dropna())
     )
@@ -242,8 +183,7 @@ if len(team) == 6:
             weak_members = []
 
             for name in team:
-                member = team_data.loc[team_data["Name"].eq(name)].iloc[0]
-                multiplier = damage_multiplier(attack_type, member)
+                multiplier = damage_multiplier(attack_type, find_pokemon(team_data, name))
 
                 if multiplier > 1:
                     weak_members.append((name, multiplier))

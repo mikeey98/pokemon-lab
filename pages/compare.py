@@ -1,31 +1,12 @@
-from pathlib import Path
-
-import pandas as pd
 import streamlit as st
-from shared.sprite_ids import special_sprite_ids
+from shared.data import STATS, find_pokemon, load_pokemon, sprite_url, types_of
 from shared.type_icons import type_icons_html
+from shared.ui import page_header, text_emblem
 
-# Load the same cleaned data as the other pages
-data_path = Path(__file__).parent.parent / "data" / "PokemonData_clean.csv"
-pokemon = pd.read_csv(data_path)
+pokemon = load_pokemon()
 names = pokemon["Name"].sort_values()
 
-# Page header: VS symbol matching the other pages
-st.html("""
-<div style="position:relative; overflow:hidden; height:150px;
-            display:flex; align-items:center;">
-    <div style="position:absolute; right:18px; top:0;
-                width:150px; height:150px; box-sizing:border-box;
-                border:9px solid #C73E3E; border-radius:50%;
-                display:flex; align-items:center; justify-content:center;
-                color:#C73E3E; font:900 54px Nunito,sans-serif;
-                opacity:0.25;">VS</div>
-    <h1 style="position:relative; margin:0; color:#24334A;
-               font-family:Nunito,sans-serif;">
-        Compare Pokémon
-    </h1>
-</div>
-""")
+page_header("Compare Pokémon", text_emblem("VS", font_size=54))
 
 left, right = st.columns(2)
 
@@ -53,36 +34,22 @@ if first == second:
     st.stop()
 
 # Find the two selected rows
-first_pokemon = pokemon.loc[pokemon["Name"].eq(str(first))].iloc[0]
-second_pokemon = pokemon.loc[pokemon["Name"].eq(str(second))].iloc[0]
+first_pokemon = find_pokemon(pokemon, str(first))
+second_pokemon = find_pokemon(pokemon, str(second))
 
 # Show both Pokémon using the same card layout
 for column, selected in zip(st.columns(2), (first_pokemon, second_pokemon)):
     with column, st.container(border=True):
         st.subheader(str(selected["Name"]))
-
-        sprite_id = special_sprite_ids.get(str(selected["Name"]), int(selected["Num"]))
-        sprite_url = (
-            "https://raw.githubusercontent.com/PokeAPI/sprites/master/"
-            f"sprites/pokemon/{sprite_id}.png"
-        )
-        st.image(sprite_url, width=150)
-
-        types = [
-            str(selected[type_column])
-            for type_column in ("Type1", "Type2")
-            if pd.notna(selected[type_column])
-        ]
-        st.html(type_icons_html(types))
+        st.image(sprite_url(selected), width=150)
+        st.html(type_icons_html(types_of(selected)))
 
 # Compare the six base stats
-stats = ["HP", "Attack", "Defense", "SpAtk", "SpDef", "Speed"]
-
 st.subheader("Base stat comparison")
 st.caption(f"Gray numbers show how {second} differs from {first}.")
 
 with st.container(border=True):
-    for stat in stats:
+    for stat in STATS:
         first_value = int(first_pokemon[stat])
         second_value = int(second_pokemon[stat])
 

@@ -1,3 +1,5 @@
+# Run from the project folder with: python3 -m experiments.ask_qwen
+# (running the file directly cannot find the shared package)
 from pathlib import Path
 
 import pandas as pd
@@ -16,11 +18,6 @@ if matches.empty:
     raise ValueError(f"{name!r} was not found in the dataset.")
 
 selected = matches.iloc[0]
-
-types = [selected["Type1"]]
-
-if pd.notna(selected["Type2"]):
-    types.append(selected["Type2"])
 
 facts = build_pokemon_facts(selected)
 
