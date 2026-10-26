@@ -1,33 +1,16 @@
 import random
 import re
-from pathlib import Path
 
-import pandas as pd
 import requests
 import streamlit as st
-from shared.sprite_ids import special_sprite_ids
+from shared.data import load_pokemon, sprite_url, types_of
+from shared.names import is_correct_guess, species_name
+from shared.ui import page_header, text_emblem
 
 # Load one form per Pokédex number
-data_path = Path(__file__).parent.parent / "data" / "PokemonData_clean.csv"
-pokemon = pd.read_csv(data_path)
-pokemon = pokemon.drop_duplicates("Num").reset_index(drop=True)
+pokemon = load_pokemon().drop_duplicates("Num").reset_index(drop=True)
 
-# Page header: mystery symbol matching the other pages
-st.html("""
-<div style="position:relative; overflow:hidden; height:150px;
-            display:flex; align-items:center;">
-    <div style="position:absolute; right:18px; top:0;
-                width:150px; height:150px; box-sizing:border-box;
-                border:9px solid #C73E3E; border-radius:50%;
-                display:flex; align-items:center; justify-content:center;
-                color:#C73E3E; font:900 95px Nunito,sans-serif;
-                opacity:0.25;">?</div>
-    <h1 style="position:relative; margin:0; color:#24334A;
-               font-family:Nunito,sans-serif;">
-        Who's That Pokémon?
-    </h1>
-</div>
-""")
+page_header("Who's That Pokémon?", text_emblem("?", font_size=95))
 
 
 @st.cache_data
@@ -63,12 +46,8 @@ if "quiz_mistakes" not in st.session_state:
     st.session_state.quiz_mistakes = 0
 
 mystery = pokemon.iloc[st.session_state.quiz_index]
-sprite_id = special_sprite_ids.get(str(mystery["Name"]), int(mystery["Num"]))
-
-sprite_url = (
-    "https://raw.githubusercontent.com/PokeAPI/sprites/master/"
-    f"sprites/pokemon/{sprite_id}.png"
-)
+# "Deoxys Normal Forme" is just "Deoxys" in the quiz
+answer = species_name(str(mystery["Name"]))
 
 # Show the silhouette until the answer is correct
 silhouette = "" if st.session_state.quiz_solved else "filter:brightness(0);"
@@ -76,14 +55,14 @@ silhouette = "" if st.session_state.quiz_solved else "filter:brightness(0);"
 with st.container(border=True):
     st.html(
         f'<div style="text-align:center; padding:12px 0;">'
-        f'<img src="{sprite_url}" alt="Mystery Pokémon" '
+        f'<img src="{sprite_url(mystery)}" alt="Mystery Pokémon" '
         f'style="width:240px; image-rendering:pixelated; {silhouette}">'
         f"</div>"
     )
 
 # Check the player's guess
 if st.session_state.quiz_solved:
-    st.success(f"Correct! It's {mystery['Name']}!")
+    st.success(f"Correct! It's {answer}!")
 
     if st.button("Play again"):
         st.session_state.quiz_index = random.randrange(len(pokemon))
@@ -105,7 +84,7 @@ else:
         st.rerun()
 
     if submitted and guess.strip():
-        if guess.strip().casefold() == str(mystery["Name"]).casefold():
+        if is_correct_guess(guess, str(mystery["Name"])):
             st.session_state.quiz_solved = True
             st.rerun()
         else:
@@ -114,9 +93,9 @@ else:
 
     # Keep revealed hints visible between guesses
     hints = [
-        f"Type: {mystery['Type1']}",
+        f"Type: {' / '.join(types_of(mystery))}",
         f"Generation: {int(mystery['Generation'])}",
-        f"Starts with: {str(mystery['Name'])[0]}",
+        f"Starts with: {answer[0]}",
     ]
 
     if st.session_state.quiz_mistakes >= 4:
@@ -126,11 +105,11 @@ else:
             if result is None:
                 hints.append("About: No English Pokédex entry found.")
             else:
-                about, species_name = result
+                about, api_name = result
                 about = about.replace("\n", " ").replace("\f", " ")
 
                 # Hide both the displayed name and the species name in the text.
-                names = [str(mystery["Name"]), species_name.replace("-", " ")]
+                names = [answer, api_name.replace("-", " ")]
                 for pokemon_name in sorted(names, key=len, reverse=True):
                     about = re.sub(
                         rf"(?<!\w){re.escape(pokemon_name)}(?!\w)",
