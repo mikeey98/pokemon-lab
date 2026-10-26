@@ -2,6 +2,7 @@ import pandas as pd
 import requests
 import streamlit as st
 from shared.data import STATS, find_pokemon, load_pokemon, sprite_url, types_of
+from shared.team import MAX_TEAM_SIZE, parse_team
 from shared.type_icons import type_icons_html
 from shared.ui import TEAM_EMBLEM, page_header, pokemon_summary
 
@@ -56,15 +57,18 @@ def show_weakness_row(attack_type, weak_members, team_data):
         with type_col:
             st.html(type_icons_html([attack_type]))
 
-        count_col.markdown(f"**{len(weak_members)} of 6**")
+        count_col.markdown(f"**{len(weak_members)} of {len(team_data)}**")
         sprites_col.image(sprite_urls, width=45, alt=names)
 
 
 page_header("Team Builder", TEAM_EMBLEM)
 
 
+# Start from the team in the URL, e.g. ?team=Pikachu,Gengar
 if "team" not in st.session_state:
-    st.session_state.team = []
+    st.session_state.team = parse_team(
+        st.query_params.get("team", ""), set(pokemon["Name"])
+    )
 
 
 def add_to_team():
@@ -80,8 +84,14 @@ def remove_from_team(name):
 
 team = st.session_state.team
 
+# Keep the URL in sync so the team can be shared or bookmarked
+if team:
+    st.query_params["team"] = ",".join(team)
+else:
+    st.query_params.pop("team", None)
 
-if len(team) < 6:
+
+if len(team) < MAX_TEAM_SIZE:
     available = pokemon.loc[~pokemon["Name"].isin(team), "Name"].sort_values()
 
     selected = st.selectbox(
@@ -91,7 +101,7 @@ if len(team) < 6:
         placeholder="Search for a Pokémon...",
         key="team_pick",
     )
-    st.caption(f"{len(team)}/6 Pokémon selected")
+    st.caption(f"{len(team)}/{MAX_TEAM_SIZE} Pokémon selected")
 
     if selected is not None:
         st.subheader(str(selected))
@@ -103,7 +113,7 @@ if len(team) < 6:
         disabled=selected is None,
     )
 else:
-    st.caption("6/6 Pokémon selected")
+    st.caption(f"{MAX_TEAM_SIZE}/{MAX_TEAM_SIZE} Pokémon selected")
 
 
 if team:
@@ -135,7 +145,7 @@ if team:
                     )
 
 
-if len(team) == 6:
+if team:
     team_data = pokemon.loc[pokemon["Name"].isin(team)]
     averages = {stat: float(team_data[stat].mean()) for stat in STATS}
 
