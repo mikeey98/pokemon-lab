@@ -33,10 +33,10 @@ Num,Name,Type1,Type2,HP,Attack,Defense,SpAtk,SpDef,Speed,Generation,Legendary
 26,Raichu,Electric,,60,90,55,90,80,110,1,False
 27,Sandshrew,Ground,,50,75,85,20,30,40,1,False
 28,Sandslash,Ground,,75,100,110,45,55,65,1,False
-29,Nidoranâ™€,Poison,,55,47,52,40,40,41,1,False
+29,Nidoran♀,Poison,,55,47,52,40,40,41,1,False
 30,Nidorina,Poison,,70,62,67,55,55,56,1,False
 31,Nidoqueen,Poison,Ground,90,92,87,75,85,76,1,False
-32,Nidoranâ™‚,Poison,,46,57,40,40,40,50,1,False
+32,Nidoran♂,Poison,,46,57,40,40,40,50,1,False
 33,Nidorino,Poison,,61,72,57,55,55,65,1,False
 34,Nidoking,Poison,Ground,81,102,77,85,75,85,1,False
 35,Clefairy,Fairy,,70,45,48,60,65,35,1,False
@@ -269,7 +269,7 @@ Num,Name,Type1,Type2,HP,Attack,Defense,SpAtk,SpDef,Speed,Generation,Legendary
 248,Tyranitar,Rock,Dark,100,134,110,95,100,61,2,False
 248,Mega Tyranitar,Rock,Dark,100,164,150,95,120,71,2,False
 249,Lugia,Psychic,Flying,106,90,130,90,154,110,2,True
-250,Ho-oh,Fire,Flying,106,130,90,110,154,90,2,True
+250,Ho-Oh,Fire,Flying,106,130,90,110,154,90,2,True
 251,Celebi,Psychic,Grass,100,100,100,100,100,100,2,False
 252,Treecko,Grass,,40,45,35,65,55,70,3,False
 253,Grovyle,Grass,,50,65,45,85,65,95,3,False
@@ -736,7 +736,7 @@ Num,Name,Type1,Type2,HP,Attack,Defense,SpAtk,SpDef,Speed,Generation,Legendary
 666,Vivillon,Bug,Flying,80,52,50,90,50,89,6,False
 667,Litleo,Fire,Normal,62,50,58,73,54,72,6,False
 668,Pyroar,Fire,Normal,86,68,72,109,66,106,6,False
-669,FlabÃ©bÃ©,Fairy,,44,38,39,61,79,42,6,False
+669,Flabébé,Fairy,,44,38,39,61,79,42,6,False
 670,Floette,Fairy,,54,45,47,75,98,52,6,False
 671,Florges,Fairy,,78,65,68,112,154,75,6,False
 672,Skiddo,Grass,,66,65,48,62,57,52,6,False
