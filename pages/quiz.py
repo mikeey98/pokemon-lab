@@ -5,6 +5,7 @@ import requests
 import streamlit as st
 from shared.data import load_pokemon, sprite_url, types_of
 from shared.names import is_correct_guess, species_name
+from shared.quiz import update_streak
 from shared.ui import page_header, text_emblem
 
 # Load one form per Pokédex number
@@ -33,24 +34,51 @@ def get_quiz_about(number):
     return english[-1]["flavor_text"], data["name"]
 
 
-# Keep the same mystery Pokémon when the page reruns
-if "quiz_index" not in st.session_state:
-    st.session_state.quiz_index = random.randrange(len(pokemon))
+GENERATIONS = ["All", 1, 2, 3, 4, 5, 6]
 
-# Remember whether the player guessed correctly
-if "quiz_solved" not in st.session_state:
+
+def pick_mystery():
+    """Choose a new Pokémon from the selected generation and reset the round."""
+    generation = st.session_state.get("quiz_generation", "All")
+    pool = pokemon
+    if generation != "All":
+        pool = pokemon[pokemon["Generation"].eq(generation)]
+    # Avoid showing the same Pokémon twice in a row
+    numbers = [num for num in pool["Num"] if num != st.session_state.get("quiz_num")]
+
+    st.session_state.quiz_num = random.choice(numbers)
     st.session_state.quiz_solved = False
-
-# Count incorrect guesses
-if "quiz_mistakes" not in st.session_state:
+    st.session_state.quiz_skipped = False
     st.session_state.quiz_mistakes = 0
 
-mystery = pokemon.iloc[st.session_state.quiz_index]
+
+# Keep the same mystery Pokémon when the page reruns
+if "quiz_num" not in st.session_state:
+    pick_mystery()
+
+# Score and streaks survive new rounds
+for key in ("quiz_score", "quiz_streak", "quiz_best_streak"):
+    st.session_state.setdefault(key, 0)
+
+mystery = pokemon.loc[pokemon["Num"].eq(st.session_state.quiz_num)].iloc[0]
 # "Deoxys Normal Forme" is just "Deoxys" in the quiz
 answer = species_name(str(mystery["Name"]))
 
-# Show the silhouette until the answer is correct
-silhouette = "" if st.session_state.quiz_solved else "filter:brightness(0);"
+st.selectbox(
+    "Generation",
+    GENERATIONS,
+    key="quiz_generation",
+    on_change=pick_mystery,
+)
+st.caption(
+    f"Score: {st.session_state.quiz_score} · "
+    f"Streak: {st.session_state.quiz_streak} · "
+    f"Best streak: {st.session_state.quiz_best_streak}"
+)
+
+# Show the silhouette until the round is over
+revealed = st.session_state.quiz_solved or st.session_state.quiz_skipped
+silhouette = "" if revealed else "filter:brightness(0);"
 
 with st.container(border=True):
     st.html(
@@ -64,28 +92,36 @@ with st.container(border=True):
 if st.session_state.quiz_solved:
     st.success(f"Correct! It's {answer}!")
 
-    if st.button("Play again"):
-        st.session_state.quiz_index = random.randrange(len(pokemon))
-        st.session_state.quiz_solved = False
-        st.session_state.quiz_mistakes = 0
-        st.rerun()
+    st.button("Play again", on_click=pick_mystery)
+
+elif st.session_state.quiz_skipped:
+    st.info(f"It was {answer}!")
+    st.button("Next Pokémon", on_click=pick_mystery)
 
 else:
     with st.form("guess_form", clear_on_submit=True, border=False):
         guess = st.text_input("Who is this Pokémon?")
         submitted = st.form_submit_button("Guess")
 
-    # Skip to a different Pokémon
+    # Reveal the answer first, then move on with "Next Pokémon"
     if st.button("Skip Pokémon", type="tertiary"):
-        st.session_state.quiz_index = random.choice(
-            [i for i in range(len(pokemon)) if i != st.session_state.quiz_index]
+        st.session_state.quiz_skipped = True
+        st.session_state.quiz_streak, _ = update_streak(
+            st.session_state.quiz_streak, st.session_state.quiz_best_streak, False
         )
-        st.session_state.quiz_mistakes = 0
         st.rerun()
 
     if submitted and guess.strip():
         if is_correct_guess(guess, str(mystery["Name"])):
             st.session_state.quiz_solved = True
+            st.session_state.quiz_score += 1
+            st.session_state.quiz_streak, st.session_state.quiz_best_streak = (
+                update_streak(
+                    st.session_state.quiz_streak,
+                    st.session_state.quiz_best_streak,
+                    True,
+                )
+            )
             st.rerun()
         else:
             st.session_state.quiz_mistakes += 1
