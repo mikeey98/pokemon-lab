@@ -22,31 +22,31 @@
     <td width="50%" valign="top">
       <img src="docs/screenshots/quiz.png" alt="Who's That Pokémon quiz">
       <h3>Who's That Pokémon?</h3>
-      Guess the Pokémon from its silhouette. Every wrong guess unlocks a new hint.
+      <p>Guess the silhouette. Every wrong guess unlocks a new hint.</p>
     </td>
     <td width="50%" valign="top">
       <img src="docs/screenshots/pokedex.png" alt="Pokédex page for Charizard">
       <h3>Pokédex</h3>
-      Stats, Pokédex entries, evolution families and Mega forms. Click a sprite to jump to it.
+      <p>Stats, Pokédex entries, evolutions and Mega forms in one place.</p>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
       <img src="docs/screenshots/team.png" alt="Team Builder with six Pokémon">
       <h3>Team Builder</h3>
-      Pick six Pokémon and see the team's average stats, type mix and shared weaknesses.
+      <p>Pick six Pokémon and find the types your team is weak against.</p>
     </td>
     <td width="50%" valign="top">
-      <h3>And more</h3>
-      <ul>
-        <li><b>Compare</b>: two Pokémon head to head</li>
-        <li><b>Twins</b>: the Pokémon with the most similar base stats</li>
-        <li><b>Mega Evolution</b>: what changes when a Pokémon Mega Evolves</li>
-        <li><b>Pokébot</b>: chat about a Pokémon with a small local AI model</li>
-      </ul>
+      <img src="docs/screenshots/compare.png" alt="Pikachu compared with Raichu">
+      <h3>Compare</h3>
+      <p>Put two Pokémon side by side and see who wins each stat.</p>
     </td>
   </tr>
 </table>
+
+<p align="center">
+  Also included: <b>Twins</b> (most similar stats), <b>Mega Evolution</b> and <b>Pokébot</b> (local AI chat).
+</p>
 
 ## How it works
 
