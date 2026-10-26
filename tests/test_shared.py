@@ -1,6 +1,8 @@
 import pandas as pd
 from shared.data import load_pokemon, sprite_url, types_of
 from shared.names import is_correct_guess, species_name
+from shared.quiz import update_streak
+from shared.team import parse_team
 
 
 def row(name, num, type1, type2=None):
@@ -37,3 +39,25 @@ def test_clean_data_has_no_broken_names():
     names = load_pokemon()["Name"]
     assert not names.str.contains("Ã|â").any()
     assert names.is_unique
+
+
+def test_streak_grows_and_resets():
+    assert update_streak(0, 0, correct=True) == (1, 1)
+    assert update_streak(3, 5, correct=True) == (4, 5)
+    assert update_streak(5, 5, correct=True) == (6, 6)
+    assert update_streak(4, 6, correct=False) == (0, 6)
+
+
+def test_parse_team_skips_unknown_names_and_repeats():
+    known = {"Pikachu", "Gengar", "Mr. Mime"}
+    assert parse_team("Pikachu,Gengar", known) == ["Pikachu", "Gengar"]
+    assert parse_team("Pikachu, Mr. Mime,Pikachu,Missingno", known) == [
+        "Pikachu",
+        "Mr. Mime",
+    ]
+    assert parse_team("", known) == []
+
+
+def test_parse_team_keeps_at_most_six():
+    names = [f"Mon{number}" for number in range(8)]
+    assert parse_team(",".join(names), set(names)) == names[:6]
