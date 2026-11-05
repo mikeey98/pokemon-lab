@@ -1,5 +1,15 @@
 import requests
 
+OLLAMA_URL = "http://localhost:11434"
+
+
+def ollama_is_running() -> bool:
+    """Ollama only exists on the user's own computer, not in the online version."""
+    try:
+        return requests.get(f"{OLLAMA_URL}/api/tags", timeout=2).ok
+    except requests.RequestException:
+        return False
+
 
 def ask_qwen(
     facts: str,
@@ -24,7 +34,7 @@ def ask_qwen(
     ]
 
     response = requests.post(
-        "http://localhost:11434/api/chat",
+        f"{OLLAMA_URL}/api/chat",
         json={
             "model": "qwen3:1.7b",
             "messages": messages,

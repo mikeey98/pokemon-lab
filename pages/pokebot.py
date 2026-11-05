@@ -4,7 +4,7 @@ import requests
 import streamlit as st
 from shared.data import find_pokemon, load_pokemon, sprite_url, types_of
 from shared.pokemon_facts import build_pokemon_facts
-from shared.qwen import ask_qwen
+from shared.qwen import ask_qwen, ollama_is_running
 from shared.type_icons import type_icons_html
 from shared.ui import NAVY
 
@@ -22,6 +22,16 @@ with title_col:
 
 with icon_col:
     st.image(bot_icon, width=130)
+
+# Explain up front instead of failing after the first question
+if not ollama_is_running():
+    st.info(
+        "Pokébot runs on a small AI model on your own computer, so it is not "
+        "available in the online version. Run the app locally with "
+        "[Ollama](https://ollama.com) to chat. See the README for how.",
+        icon=":material/smart_toy:",
+    )
+    st.stop()
 
 pokemon = load_pokemon()
 
@@ -74,7 +84,7 @@ if question:
                 st.session_state["pokebot_messages"],
             )
     except requests.RequestException:
-        st.error("Could not reach Ollama. Check that it is running.")
+        st.error("Pokébot stopped answering. Check that Ollama is still running.")
     else:
         st.session_state["pokebot_messages"].extend(
             [
