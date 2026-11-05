@@ -12,6 +12,14 @@
 </p>
 
 <p align="center">
+  <a href="https://pokemon-lab.streamlit.app/">
+    <img src="https://static.streamlit.io/badges/streamlit_badge_black_white.svg" alt="Open in Streamlit">
+  </a>
+  <br>
+  <b><a href="https://pokemon-lab.streamlit.app/">pokemon-lab.streamlit.app</a></b>
+</p>
+
+<p align="center">
   <img src="docs/screenshots/home.png" alt="Home page with a card for each feature" width="720">
 </p>
 
@@ -60,6 +68,9 @@
   the Pokémon's stats and types, so it is told to say when it does not know something.
 
 ## Run it locally
+
+The quickest way to try it is the [live app](https://pokemon-lab.streamlit.app/).
+To run it on your own computer:
 
 ```bash
 pip install -r requirements.txt
